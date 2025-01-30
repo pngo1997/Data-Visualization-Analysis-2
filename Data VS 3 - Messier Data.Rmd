@@ -1,0 +1,95 @@
+---
+title: "Data VS 3"
+author: "Mai Ngo"
+date: "2024-05-13"
+output: pdf_document
+---
+
+Import libraries.
+```{r}
+library(ggplot2)
+library(ggbeeswarm)
+```
+
+## Question 2. MessierData.csv
+Set Working Directory.  
+```{r}
+setwd("C:/Users/maimu/OneDrive/Documents/DePaul/DSC 465/3rd")
+```
+
+Read the data set. Get basic information about the Messier data set.
+```{r}
+MessierData <- read.csv("MessierData.csv", header=FALSE, comment.char="#")
+#Drop first row. Importing malfunction.
+messierData <- MessierData[-1, ]
+#Adding columns name.
+colnames(messierData) <- c("Messier", "NGC", "Kind", "Type", "Distance", "Size",
+                           "Apparent_Magnitude", "R.A.", "Dec.", "Constellation",
+                           "Season", "Discoverer", "Year", "Remarks")
+
+#Replace cells that empty or containing '-' with NA.
+messierData[messierData == "" | messierData == "-" | messierData == "?"] <- NA
+#Drop Remarks column due to high missing values.
+messierData <- messierData[, -which(names(messierData) == "Remarks")]
+#Remove row with Messier = 40. Missing 8 out of 14 values.
+messierData <- messierData[messierData$Messier != 40, ]
+
+print(paste("Missing values count: ", sum(is.na(messierData))))
+print(paste("Row:", dim(messierData)[1], "Column:", dim(messierData)[2]))
+```
+
+### a) Start by trying to graph one or more properties of the objects against the Messier Number. Remember, there is nothing ‘intrinsic’ about this number, it is just the order of Messier’s list. Is there any property that exhibits a pattern with respect to the ordering in his list? 
+
+* Preliminary step: Removing Messier object #40 due to high number of missing values. 
+* The objective is to plot a combination of categorical and numerical attributes to get a good grasp of the data. Ultimately, Season and Apparent Magnitude were chosen since resulted graph does not look as much cluttered, and able to analyze.
+* From the graph, there is somewhat a light positive linear relationship between Messier Object Number and Apparent Magnitude, the higher the order of Messier Object Number corresponding to higher the values of Apparent Magnitude.  
+* As for Season, almost all 'Sp' Season stays on the upper right corner where higher values of Apparent Magnitude and higher order of Messier Object Number. On the other hand, majority of 'Su' Season correpond with lower order of Messier Object Number.
+
+```{r}
+messierData$Messier <- as.numeric(messierData$Messier)
+ggplot(messierData, aes(x = Messier, y = Apparent_Magnitude, color = Season)) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(0, 110, by = 10),
+                     labels = function(x) ifelse(x %% 10 == 0, as.character(x), "")) +
+  theme_minimal() +
+  ggtitle("Season versus Apparent Magnitude of Messier Objects")
+```
+
+### b) Create a visualization that compares the distributions of the distances to the objects in each Kind. Note that the Type variable is a very different category and is really a subcategory of Kind. Do not use that here. Sort the distribution displays in a way that makes the relationship clear.
+
+* Preliminary step: Transforming Distance attribute using log base 10 due to nature of the data - with magnitude.
+* Sort the distribution: Using Bee swarm plot to make the relationship distribution visualization clearer, less cluttered.
+* From the graph, among 7 Kinds, all Galaxy objects have further distance compared to the other six kinds which are distinguishly closer. 
+
+```{r}
+ggplot(messierData , aes(x = Kind, y =log10(Distance))) +
+  geom_beeswarm(color = 'brown3') +
+  ggtitle("Kind versus Distance (log base 10) of Messier Objects") +
+  theme_minimal()
+```
+
+### c) Create a scatter plot with the distance to the Messier objects plotted against their Apparent Magnitude (it’s their visual magnitude, a measure of how bright they are in the sky). Note that these values may be backwards from what you would think. The higher the number the fainter the object is in the sky. Try to incorporate that into your visualization to make the relationship clear. 
+
+* Preliminary step: Transforming Distance attribute using log base 10 due to nature of the data - with magnitude.
+* To visualize the story of the higher the number the fainter the object is in the sky, sequential color palette for Apparent Magnitude will deliver that message. The higher up in Apparent Magnitude and further distance, the object - circle will have lighter color indicates less clearly visible. 
+
+```{r}
+ggplot(messierData, aes(x = Apparent_Magnitude, y = log10(Distance))) +
+  geom_point(size = 1.8, aes(color = Apparent_Magnitude)) +
+  scale_color_gradient(low = "#960018", high = "#ffbaa1", name = "Apparent Magnitude") +
+  ggtitle("Apparent Magnitude versus Distance (log base 10) of Messier Objects") +
+  theme_minimal()
+```
+
+### d) Augment the visualization in (c) by adjusting the size of the points in the scatter-plot based on the angular Size of the objects in the sky. Evaluate how easy it is to analyze all encoded aspects of the data from this graph and give a suggestion on how you might modify the graph to display all this information more readably. 
+
+* Preliminary step: Transforming Distance attribute using log base 10 due to nature of the data - with magnitude.
+* Using same code as part 2c, make further change with aes in geom_point with Size attribute. Compared with previous graph, adding Size attribute have enhance the data story that the further it gets, the smaller and brighter the Messier objects are.
+
+```{r}
+ggplot(messierData, aes(x = Apparent_Magnitude, y = log10(Distance))) +
+  geom_point(aes(size = Size, color = Apparent_Magnitude)) +
+  scale_color_gradient(low = "#960018", high = "#ffbaa1", name = "Apparent Magnitude") +
+  ggtitle("Apparent Magnitude versus Distance (log base 10) with Size of Messier Objects") +
+  theme_minimal() 
+```

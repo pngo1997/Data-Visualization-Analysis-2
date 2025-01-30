@@ -1,0 +1,140 @@
+---
+title: "Data VS 3"
+author: "Mai Ngo"
+date: "2024-05-13"
+output: pdf_document
+---
+
+Import libraries.
+```{r message = FALSE}
+library(ggplot2)
+library(ggbeeswarm)
+library(dplyr)
+library(tidyverse)
+library(cowplot)
+```
+
+## Question 4. AirQuality.csv
+Set Working Directory.  
+```{r}
+setwd("C:/Users/maimu/OneDrive/Documents/DePaul/DSC 465/3rd")
+```
+
+Read the data set. Get basic information about the Messier data set.
+```{r}
+airData <- read.csv(file="AirQuality.csv", header=TRUE, sep=",")
+print(paste("Missing values count:", sum(is.na(airData))))
+print(paste("Row:", dim(airData)[1], "Column:", dim(airData)[2]))
+
+air_dataTypes <- table(sapply(airData, class))
+print(paste("Data type count:", names(air_dataTypes), ":", air_dataTypes, sep = " "))
+```
+
+### a) Use a scatterplot to look at the relationship between Wind and Solar.R (solar radiation). Show a fit line. Make sure to produce a clean visualization with emphasis on the trend. This provides one view of the relationship. For help doing this in R, see Tutorial 5. In Tableau, this is available from the Analysis tab. It is one of the tabs along with Data for the panel on the far left (i.e. look at the top of the panel from which you drag variables). 
+
+* Preliminary step: Removing missing values in Solar R. attributes.
+* From the graph, there is a light negative relationship between Wind and Solar R. attributes but not significant at all at -0.0568.
+
+```{r}
+airData1 <- na.omit(airData[, c("Wind", "Solar.R")])
+print(paste("Correlation score Wind versus Solar R.:", cor(airData1$Wind, airData1$Solar.R)))
+```
+
+```{r}
+ggplot(airData1, aes(x = Wind, y = Solar.R)) +
+  geom_point(color = 'brown3') +
+  geom_smooth(method = "lm", se = FALSE, color = 'darkgreen') +
+  ggtitle("Wind versus Solar.R") + 
+  theme_minimal()
+```
+
+### b) Use a plot that will show the distributions of Wind and Solar.R and allow you to compare with fine detail.
+
+### First Approach: Box Plot.
+
+* Since the objective is to visualize and compare the distributions of two variable Wind and Solar R., Q-Q plot would be the best choice here. However, since we are doing Q-Q plot for extra credit, I will do box plot for this task.
+* Overall, Wind attribute has a right skewed distribution with three outliers on the upper side. Majority of Wind data are concentrated on the lower end between 7.5 and 11.5 values. While Solar.R has a lightly left skewed, close to normal distribution but not. Majority of Solar.R data are concentrated in the middle of value range, between 105 and 260 with no outlier as shown in the graph.
+
+```{r warning=FALSE}
+windPlot <- ggplot(airData1, aes(x = factor(1), y = Wind, fill = "Wind")) +
+  geom_boxplot(fill = "lightblue", alpha = 0.8) +
+  labs(title = "Boxplot of Wind") +
+  theme_minimal() +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank(),   
+        axis.ticks.x = element_blank()) 
+
+solarPlot <- ggplot(airData1, aes(x = factor(1), y = Solar.R, fill = "Solar.R")) +
+  geom_boxplot(fill = "darksalmon", alpha = 0.8) +
+  labs(title = "Boxplot of Solar.R") +
+  theme_minimal() +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank(),  
+        axis.ticks.x = element_blank()) 
+
+cowplot::plot_grid(windPlot, solarPlot, ncol = 2, scales = "free_y")
+```
+
+
+### Second Approach: Q-Q plot (wihthout normalization). 
+
+```{r}
+#Data frame with sorted columns. 
+airData2 <- airData1 %>% mutate(sortedWind = sort(Wind), sortedSolar.R = sort(Solar.R))
+
+#Q-Q plot.
+ggplot(airData2, aes(x = sortedWind, y = sortedSolar.R)) +
+  geom_point(color = 'brown3') +
+  ggtitle("Q-Q Plot: Wind versus Solar.R") +
+  xlab("Sorted Wind") +
+  ylab("Sorted Solar.R") +
+  theme_minimal()
+```
+
+
+### c) Finally, show these distributions in context of the rest of the variables by using a technique for comparing multiple distributions. Note: you will need to transform the data in a particular way that we have studied. It showed in the Tableau tutorial and in an R tutorial. Hint – you need to collapse the current variables into two: (1) stores the original variable name, and (2) stores the corresponding original value.
+
+Pivot longer the data for easier graphing.
+```{r}
+airData3 <- airData %>% drop_na()
+airData4 <- airData3 %>%
+  pivot_longer(cols = c(Ozone, Solar.R, Wind, Temp), 
+               names_to = "Measurement", values_to = "Value")
+head(airData4)
+```
+
+* After pivoting the data, we can graph the distributions side by side. 
+* Overall, there is an outlier on the right hand side of Ozone distribution. Among four variables, Solar.R distribution is wide spread with largest value range.
+
+```{r, warning=FALSE}
+ggplot(airData4, aes(x = Measurement, y = Value, color = Measurement)) +
+  geom_boxplot() +
+  geom_beeswarm() +
+  scale_color_manual(values = c("Ozone" = "royalblue3", "Solar.R" = "darkorange", 
+                                "Temp" = "forestgreen", "Wind" = "red")) +  
+  theme_minimal() +
+  ggtitle("Distributions of Ozone, Solar.R, Temp, and Wind")
+```
+
+### d) For extra credit, compare Wind and Solar.R again with a QQ plot. What does this tell you? 
+
+* Preliminary step: Sorting Wind and Solar R. attributes in ascending order.
+* Typically for Q-Q plot, we are looking for a 45 degree straight slope depicts normal distribution. From the graph, Q-Q plot has a more wavy pattern and the points deviate from the straight line indicate that the two attributes do not have normal distribution.
+
+
+```{r}
+#Data frame with sorted columns. 
+airData5 <- airData1 %>% mutate(sortedWind = sort(Wind), sortedSolar.R = sort(Solar.R))
+airData5 <- airData1 %>%
+  mutate(sortedWind = sort(Wind),
+         sortedSolar.R = sort(Solar.R)) %>%
+  mutate(sortedWind = (sortedWind - min(sortedWind)) / (max(sortedWind) - min(sortedWind)),
+         sortedSolar.R = (sortedSolar.R - min(sortedSolar.R)) /
+                        (max(sortedSolar.R) - min(sortedSolar.R)))
+#Q-Q plot.
+ggplot(airData5, aes(x = sortedWind, y = sortedSolar.R)) +
+  geom_point(color = 'brown3') +
+  ggtitle("Q-Q Plot: Wind versus Solar.R") +
+  geom_abline(slope = 1, intercept = 0, color = 'darkgreen') +
+  xlab("Sorted Wind") +
+  ylab("Sorted Solar.R") +
+  theme_minimal()
+```
